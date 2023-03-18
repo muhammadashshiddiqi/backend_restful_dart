@@ -1,37 +1,61 @@
 import 'dart:convert';
 
-import 'package:backend_restful_dart/connection/mysql.dart';
+import 'package:backend_restful_dart/controller/karyawan_controller.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 class Service {
   Handler get handler {
     final router = Router();
+    final header = <String, String>{'Content-Type': 'application/json'};
 
-    router.get('/all', (Request request) async {
-      try {
-        final resultSet = await mysql.dbQuery("SELECT * FROM master_karyawan");
-        Map<String, dynamic> jsonData = {};
-        if (resultSet.numOfRows > 0) {
-          List lsData = [];
-          for (final row in resultSet.rows) {
-            lsData.add(row.assoc());
-          }
-
-          jsonData.addAll({'code': 200, 'status': 'success', 'data': lsData});
-        }
-
+    router.get('/karyawan-list', (Request request) async {
+      final res = await karyawanController.getAllKaryawan();
+      if (res.code == 200) {
         return Response.ok(
-          jsonEncode(jsonData),
-          headers: {'Content-Type': 'application/json'},
-        );
-      } catch (e) {
-        final error = {'message': 'Data not found', 'error': e.toString()};
-        return Response.internalServerError(
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(error),
+          jsonEncode(res.toJson()),
+          headers: header,
         );
       }
+      return Response.internalServerError(
+        body: jsonEncode(res.toJson()),
+        headers: header,
+      );
+    });
+
+    router.post('/karyawan-add', (Request request) async {
+      final payload = jsonDecode(await request.readAsString());
+      if (payload == null) {
+        return Response.notFound("Data Notfound.", headers: header);
+      }
+
+      final res = await karyawanController.addKaryawan(
+        payload['nik'],
+        payload['nama'],
+      );
+
+      if (res.code == 200) {
+        return Response.ok(
+          jsonEncode(res.toJson()),
+          headers: header,
+        );
+      }
+
+      return Response.internalServerError(
+        body: jsonEncode(res.toJson()),
+        headers: header,
+      );
+    });
+
+    router.put('/karyawan-update', (Request request) async {
+      final payload = jsonDecode(await request.readAsString());
+      List data = [];
+      data.add(payload);
+
+      return Response.ok(
+        jsonEncode({'success': true, 'data': data}),
+        headers: header,
+      );
     });
 
     return router;

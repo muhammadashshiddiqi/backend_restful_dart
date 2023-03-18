@@ -1,4 +1,3 @@
-import 'package:backend_restful_dart/models/db_response.dart';
 import 'package:mysql_client/mysql_client.dart';
 
 final mysql = _Mysql();
@@ -23,28 +22,8 @@ class _Mysql {
     print("Connected");
   }
 
-  Future<IResultSet> dbQuery(String query) async {
-    var result = await conn.execute(query);
-    //await conn.close();
+  Future<IResultSet> dbQuery(String query, {Map<String, dynamic>? data}) async {
+    var result = await conn.execute(query, data);
     return result;
-    /* var res = await dbConnect(
-      "UPDATE book SET price = :price",
-      {"price": 200},
-    );
-
-    await db()
-    await db().then((db) async {
-      db.query(query)
-        ..then((res) {
-          return DBResponses(success: res);
-        })
-        ..whenComplete(() {
-          db.close();
-        });
-
-      return null;
-    }).onError((error, stackTrace) {
-      print(error);
-    }); */
   }
 }
