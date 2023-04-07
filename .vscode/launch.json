@@ -1,0 +1,11 @@
+{
+    "version": "1.0.0",
+    "configurations": [
+        {
+            "name": "backend_restful_dart",
+            "request": "launch",
+            "type": "dart",
+            "program": "bin/server.dart",
+        }
+    ]
+}
