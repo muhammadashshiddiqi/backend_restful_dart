@@ -16,7 +16,9 @@ class KaryawanService {
   KaryawanService(this._conn);
   Router get router => Router()
     ..get('/', _getAllKaryawanHandler)
-    ..post('/add', _postAddKaryawanHandler);
+    ..post('/add', _addKaryawanHandler)
+    ..put('/update', _updateKaryawanHandler)
+    ..delete('/delete', _deleteKaryawanHandler);
 
   Future<Response> _getAllKaryawanHandler(Request request) async {
     try {
@@ -59,9 +61,10 @@ class KaryawanService {
     }
   }
 
-  Future<Response> _postAddKaryawanHandler(Request request) async {
+  Future<Response> _addKaryawanHandler(Request request) async {
     try {
-      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final body =
+          jsonDecode(await request.readAsString()) as Map<String, dynamic>;
 
       final nik = body['nik'] as String?;
       final nama = body['nama'] as String?;
@@ -135,13 +138,124 @@ class KaryawanService {
           ),
         );
       }
-      
+
       return Response.ok(
         headers: vr.headers,
         jsonEncode(
           ResponseWrapper(
             statusCode: HttpStatus.ok,
-            message: 'Order successfully created',
+            message: 'Karyawan successfully created',
+          ).toJson(),
+        ),
+      );
+    } on PostgreSQLException catch (e, trace) {
+      log(e.toString(), stackTrace: trace);
+      return Response.internalServerError(
+        headers: vr.headers,
+        body: jsonEncode(
+          ResponseWrapper(
+            statusCode: HttpStatus.internalServerError,
+            message: e.message,
+          ).toJson(),
+        ),
+      );
+    } catch (e, trace) {
+      log(e.toString(), stackTrace: trace);
+      return Response.internalServerError(
+        headers: vr.headers,
+        body: jsonEncode(
+          ResponseWrapper(
+            statusCode: HttpStatus.internalServerError,
+            message: e.toString(),
+          ).toJson(),
+        ),
+      );
+    }
+  }
+
+  Future<Response> _updateKaryawanHandler(Request request) async {
+    try {
+      final nik = request.requestedUri.queryParameters['nik'] ?? '';
+      final body =
+          jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final nama = body['nama'] as String?;
+      final gaji = body['gaji'] as int?;
+
+      const updateKaryawanQuery = '''
+        UPDATE 
+          master_karyawan 
+        SET 
+          nama = @nama, 
+          gaji = @gaji:int4 
+        WHERE nik = @nik 
+        RETURNING nik
+      ''';
+      final postgresResult = await _conn.db.query(
+        updateKaryawanQuery,
+        substitutionValues: {'nama': nama, 'gaji': gaji, 'nik': nik},
+      );
+      if (postgresResult.isEmpty) {
+        return Response.internalServerError(
+          headers: vr.headers,
+          body: jsonEncode(
+            ResponseWrapper(
+              statusCode: HttpStatus.internalServerError,
+              message: 'Karyawan not updated',
+            ).toJson(),
+          ),
+        );
+      }
+
+      return Response.ok(
+        headers: vr.headers,
+        jsonEncode(
+          ResponseWrapper(
+            statusCode: HttpStatus.ok,
+            message: 'Karyawan successfully updated',
+          ).toJson(),
+        ),
+      );
+    } on PostgreSQLException catch (e, trace) {
+      log(e.toString(), stackTrace: trace);
+      return Response.internalServerError(
+        headers: vr.headers,
+        body: jsonEncode(
+          ResponseWrapper(
+            statusCode: HttpStatus.internalServerError,
+            message: e.message,
+          ).toJson(),
+        ),
+      );
+    } catch (e, trace) {
+      log(e.toString(), stackTrace: trace);
+      return Response.internalServerError(
+        headers: vr.headers,
+        body: jsonEncode(
+          ResponseWrapper(
+            statusCode: HttpStatus.internalServerError,
+            message: e.toString(),
+          ).toJson(),
+        ),
+      );
+    }
+  }
+
+  Future<Response> _deleteKaryawanHandler(Request request) async {
+    try {
+      final nik = request.requestedUri.queryParameters['nik'] ?? '';
+      const deleteKaryawanQuery =
+          ''' DELETE FROM master_karyawan WHERE nik = @nik ''';
+      final postgresResult = await _conn.db.query(
+        deleteKaryawanQuery,
+        substitutionValues: {'nik': nik},
+      );
+
+      return Response.ok(
+        headers: vr.headers,
+        jsonEncode(
+          ResponseWrapper(
+            statusCode: HttpStatus.ok,
+            message: 'Karyawan successfully deleted',
           ).toJson(),
         ),
       );
